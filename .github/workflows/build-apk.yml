@@ -28,7 +28,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4   # the Android SDK is preinstalled on ubuntu-latest
 
       - name: Build debug APK
-        run: ./gradlew --no-daemon assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
