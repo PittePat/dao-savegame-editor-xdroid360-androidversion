@@ -1,0 +1,8 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- stilisierter Drachenkopf / Flamme -->
+    <path android:fillColor="#E0902F"
+        android:pathData="M54,26 C62,38 72,44 72,58 C72,70 64,80 54,80 C44,80 36,70 36,58 C36,52 39,47 43,43 C43,50 46,54 50,55 C46,46 48,34 54,26 Z"/>
+    <path android:fillColor="#F7D08A"
+        android:pathData="M54,50 C58,56 62,60 62,66 C62,72 58,76 54,76 C50,76 46,72 46,66 C46,62 49,58 54,50 Z"/>
+</vector>
