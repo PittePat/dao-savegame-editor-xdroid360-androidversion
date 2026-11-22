@@ -15,8 +15,8 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         ndk {
-            // Pixel/Samsung/etc. (arm64), older 32-bit phones, and the emulator
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            // Chaquopy offers Python 3.12 only for 64-bit: all current phones (arm64) and the emulator (x86_64)
+            abiFilters += listOf("arm64-v8a", "x86_64")
         }
     }
 
