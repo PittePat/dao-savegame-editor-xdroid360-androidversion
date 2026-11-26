@@ -16,8 +16,12 @@ SHIM = """<script>
 window.Android = {
   call(id, m, a) { fetch('/api/' + m, {method: 'POST', body: a}).then(r => r.text()).then(t => window.__resolve(id, t)); },
   pickZip() { setTimeout(() => window.onNative('picked', JSON.stringify({path: %s, name: 'save.zip'})), 50); },
-  exportZip() { setTimeout(() => window.onNative('exported', JSON.stringify({ok: true, msg: 'Exportiert (dev)', final: true})), 50); },
-  writeBack() { setTimeout(() => window.onNative('writeback', JSON.stringify({ok: true, msg: 'Original ersetzt (dev)', final: true})), 50); },
+  exportZip() { setTimeout(() => window.onNative('exported', JSON.stringify({ok: true, code: 'saved_as', arg: 'dev.zip', final: true})), 50); },
+  getLang() { return localStorage.getItem('lang') || 'auto'; },
+  setLang(l) { localStorage.setItem('lang', l); },
+  deviceLang() { return window.DEV_LANG || navigator.language; },
+  quit() {},
+  writeBack() { setTimeout(() => window.onNative('writeback', JSON.stringify({ok: true, code: 'overwritten', arg: '', final: true})), 50); },
 };
 </script>""" % json.dumps(ZIP)
 

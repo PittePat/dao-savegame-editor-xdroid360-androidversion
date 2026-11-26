@@ -14,6 +14,8 @@ ZIP-/CRC-Logik) ist **unverändert aus dem Python-Projekt** übernommen und läu
 * **Charakter:** nicht ausgegebene Punkte, Zauber/Talente/Fertigkeiten/Spezialisierungen (Haken = gelernt),
   alle Werte (Basis/Modifikator/Aktuell/Regeneration), Eigenschaften hinzufügen (z. B. Resistenzen)
 * **Gebiete:** Truhen, Händler, Kreaturen einzelner Gebiete
+* **Sprache:** Deutsch und Englisch. Standard ist die Gerätesprache (Deutsch → Deutsch, alles andere → Englisch), umstellbar unter *Übersicht → Sprache* bzw. auf dem Startbildschirm. Weitere Sprachen: Tabelle in `assets/www/i18n.js` ergänzen. Gegenstands- und Fähigkeitsnamen stammen aus den Spieldaten und bleiben englisch.
+* **Bedienung:** Die Scroll-Position bleibt beim Zurückgehen (Container, Tabs, Listen) erhalten.
 * **Speichern:** schreibt in eine ZIP-Kopie der App und aktualisiert die `.x`-CRC32-Prüfsumme; danach
   „Als neue ZIP speichern“ (empfohlen, das Original bleibt unberührt) oder „Original überschreiben“.
   Die gespeicherte ZIP lässt sich direkt wieder in XDroid360 importieren.

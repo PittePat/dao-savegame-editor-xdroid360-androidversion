@@ -13,7 +13,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import com.chaquo.python.Python
@@ -51,9 +50,9 @@ class MainActivity : AppCompatActivity() {
         if (uri == null) emit("cancel", JSONObject()) else worker.execute {
             val r = try {
                 contentResolver.openOutputStream(uri, "w")!!.use { out -> workFile.inputStream().use { it.copyTo(out) } }
-                result(true, "Gespeichert: ${nameOf(uri) ?: "neue ZIP"}")
+                result(true, "saved_as", nameOf(uri) ?: "")
             } catch (e: Exception) {
-                result(false, "Speichern fehlgeschlagen: ${e.message}")
+                result(false, "save_failed", e.message ?: "")
             }
             emit("exported", r.put("final", r.optBoolean("ok")))
         }
@@ -95,18 +94,9 @@ class MainActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                web.evaluateJavascript("window.onBack && window.onBack()") { handled ->
-                    if (handled == "true") return@evaluateJavascript
-                    web.evaluateJavascript("window.isDirty && window.isDirty()") { dirty ->
-                        if (dirty == "true") {
-                            AlertDialog.Builder(this@MainActivity)
-                                .setTitle("Ungespeicherte Änderungen")
-                                .setMessage("Wirklich beenden? Nicht gespeicherte Änderungen gehen verloren.")
-                                .setPositiveButton("Beenden") { _, _ -> finish() }
-                                .setNegativeButton("Abbrechen", null)
-                                .show()
-                        } else finish()
-                    }
+                // the page closes sheets, steps back, or asks about unsaved changes itself (translated)
+                web.evaluateJavascript("window.onBack ? window.onBack() : false") { handled ->
+                    if (handled != "true") finish()
                 }
             }
         })
@@ -132,7 +122,9 @@ class MainActivity : AppCompatActivity() {
         }
     } catch (e: Exception) { null }
 
-    private fun result(ok: Boolean, msg: String) = JSONObject().put("ok", ok).put("msg", msg)
+    /** The UI translates [code] into the user's language. */
+    private fun result(ok: Boolean, code: String, arg: String = "") =
+        JSONObject().put("ok", ok).put("code", code).put("arg", arg)
 
     private fun importUri(uri: Uri) = worker.execute {
         try {
@@ -143,12 +135,12 @@ class MainActivity : AppCompatActivity() {
             val copied = contentResolver.openInputStream(uri)!!.use { input ->
                 workFile.outputStream().use { input.copyTo(it) }
             }
-            if (copied > 300L * 1024 * 1024) { workFile.delete(); throw IllegalStateException("Datei ist zu groß") }
+            if (copied > 300L * 1024 * 1024) { workFile.delete(); throw IllegalStateException("File too large") }
             sourceUri = uri
             displayName = nameOf(uri) ?: "savegame.zip"
             emit("picked", JSONObject().put("path", workFile.absolutePath).put("name", displayName))
         } catch (e: Exception) {
-            emit("exported", result(false, "Datei konnte nicht gelesen werden: ${e.message}"))
+            emit("exported", result(false, "read_failed", e.message ?: ""))
         }
     }
 
@@ -164,6 +156,22 @@ class MainActivity : AppCompatActivity() {
     // ---------------------------------------------------------------- JS -> native
 
     inner class NativeBridge {
+        private val prefs get() = getSharedPreferences("prefs", Context.MODE_PRIVATE)
+
+        /** "auto", "de" or "en" */
+        @JavascriptInterface
+        fun getLang(): String = prefs.getString("lang", "auto") ?: "auto"
+
+        @JavascriptInterface
+        fun setLang(lang: String) = prefs.edit().putString("lang", lang).apply()
+
+        /** Language code of the device, e.g. "de", "en", "fr" */
+        @JavascriptInterface
+        fun deviceLang(): String = resources.configuration.locales[0].language
+
+        @JavascriptInterface
+        fun quit() = runOnUiThread { finish() }
+
         @JavascriptInterface
         fun call(id: Int, method: String, args: String) {
             worker.execute {
@@ -182,19 +190,19 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun exportZip() = runOnUiThread {
             val base = displayName.removeSuffix(".zip").removeSuffix(".ZIP")
-            exportLauncher.launch("${base}_bearbeitet.zip")
+            exportLauncher.launch("${base}_edited.zip")
         }
 
         @JavascriptInterface
         fun writeBack() {
             worker.execute {
                 val uri = sourceUri
-                val r = if (uri == null) result(false, "Kein Originalort bekannt - bitte als neue ZIP speichern")
+                val r = if (uri == null) result(false, "no_origin")
                 else try {
                     contentResolver.openOutputStream(uri, "wt")!!.use { out -> workFile.inputStream().use { it.copyTo(out) } }
-                    result(true, "Original überschrieben")
+                    result(true, "overwritten")
                 } catch (e: Exception) {
-                    result(false, "Original nicht beschreibbar - bitte als neue ZIP speichern (${e.message})")
+                    result(false, "overwrite_failed", e.message ?: "")
                 }
                 emit("writeback", r.put("final", r.optBoolean("ok")))
             }

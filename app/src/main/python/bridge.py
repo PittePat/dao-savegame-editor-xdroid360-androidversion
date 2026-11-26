@@ -22,6 +22,19 @@ from abilities import (AbilityModel, POINT_STATS, KIND_TITLE, stat_value, set_po
 
 MAX_MONEY = 999999999
 
+LANG = 'de'
+
+
+def set_lang(lang):
+    """UI language for error messages ('de' or anything else = English)."""
+    global LANG
+    LANG = 'de' if lang == 'de' else 'en'
+    return LANG
+
+
+def T(de, en):
+    return de if LANG == 'de' else en
+
 
 def _read_lines(name):
     # pkgutil also works when the package is loaded from inside the APK (Chaquopy), where open() would not
@@ -173,7 +186,8 @@ def open_save(zip_path, member):
     S.reset()
     gff = LazyGFF4(BytesIO(read_member(zip_path, member)))
     if gff.header.version != 'V4.0':
-        raise ValueError('Nur Dragon Age: Origins Spielstände werden unterstützt (GFF %s)' % gff.header.version)
+        raise ValueError(T('Nur Dragon Age: Origins Spielstände werden unterstützt (GFF %s)',
+                           'Only Dragon Age: Origins savegames are supported (GFF %s)') % gff.header.version)
     root = gff.root
     S.path, S.member, S.gff, S.root = zip_path, member, gff, root
     S.wdbe = next(x for x in root[SAVEGAME_WORLDDATABASE] if x[SAVEGAME_WORLDDB_IDGROUP] == 0)
@@ -217,17 +231,17 @@ def overview():
         played = int(float(root[SAVEGAME_PLAYERCHAR][SAVEGAME_PLAYER_TIME_PLAYED]))
     except (KeyError, TypeError, ValueError):
         played = None
-    invs = [{'key': 'backpack', 'name': 'Rucksack', 'count': len(party[SAVEGAME_BACKPACK])},
-            {'key': 'plot', 'name': 'Plot-Gegenstände', 'count': len(party[SAVEGAME_PLOTITEMS])}]
+    invs = [{'key': 'backpack', 'name': 'Backpack', 'count': len(party[SAVEGAME_BACKPACK])},
+            {'key': 'plot', 'name': 'Plot items', 'count': len(party[SAVEGAME_PLOTITEMS])}]
     if 32000 in party:
-        invs.append({'key': 'party', 'name': 'Party-Lager',
+        invs.append({'key': 'party', 'name': 'Party storage',
                      'count': len(party[32000][SAVEGAME_STORE_ITEMLIST])})
     for key, (label, lst) in S.chests.items():
         invs.append({'key': key, 'name': label, 'count': len(lst)})
     approvals = []
     for aprv in (party[SAVEGAME_PARTY_APPROVAL_LIST] or ()):
         pid = aprv[SAVEGAME_PARTY_APPROVAL_ID]
-        approvals.append({'id': int(pid), 'name': S.ids2name.get(pid, 'Unbekannt %d' % pid),
+        approvals.append({'id': int(pid), 'name': S.ids2name.get(pid, T('Unbekannt %d', 'Unknown %d') % pid),
                           'level': int(aprv[SAVEGAME_PARTY_APPROVAL_LEVEL])})
     return {
         'money': int(party[SAVEGAME_MONEY]),
@@ -269,7 +283,7 @@ def set_approval(pid, level):
                 aprv[SAVEGAME_PARTY_APPROVAL_LEVEL] = INT32(level)
                 S.dirty = True
             return level
-    raise KeyError('Unbekannte Begleiter-ID %s' % pid)
+    raise KeyError(T('Unbekannte Begleiter-ID %s', 'Unknown companion ID %s') % pid)
 
 
 # --------------------------------------------------------------------------- inventories / items
@@ -301,7 +315,7 @@ def _area_lists(ai, kind):
     elif kind == 'plot':
         out = [(c[TEMPLATERESREF], c[SAVEGAME_PLOTITEMS]) for c in body[SAVEGAME_AREA_CREATURES]]
     else:
-        raise KeyError('Unbekannter Typ %s' % kind)
+        raise KeyError(T('Unbekannter Typ %s', 'Unknown type %s') % kind)
     return out
 
 
@@ -319,7 +333,7 @@ def _inv(key):
     if key.startswith('area:'):
         _, ai, kind, ci = key.split(':')
         return _area_lists(ai, kind)[int(ci)][1]
-    raise KeyError('Unbekanntes Inventar %s' % key)
+    raise KeyError(T('Unbekanntes Inventar %s', 'Unknown inventory %s') % key)
 
 
 def _touch(key):
@@ -360,7 +374,7 @@ def item_set(key, i, field, value):
     if field == 'resref':
         text = str(value).strip().strip('\0')
         if not _RESREF_RE.match(text):
-            raise ValueError('Ungültige ResRef: nur Buchstaben, Ziffern und _ erlaubt')
+            raise ValueError(T('Ungültige ResRef: nur Buchstaben, Ziffern und _ erlaubt', 'Invalid ResRef: only letters, digits and _ allowed'))
         old = row[TEMPLATERESREF]
         row[TEMPLATERESREF] = type(old)(_fit_string(old, text))
     elif field == 'count':
@@ -394,7 +408,7 @@ def item_duplicate(key, i):
 
 def item_move(key, i, dest):
     if dest == key:
-        raise ValueError('Quelle und Ziel sind gleich')
+        raise ValueError(T('Quelle und Ziel sind gleich', 'Source and destination are the same'))
     src, dst = _inv(key), _inv(dest)
     row = src[int(i)]
     del src[int(i)]
@@ -485,7 +499,7 @@ def stat_set(ci, i, col, value):
     entry = _char(ci)['stats'][int(i)]
     label = dict(_COLS)[col]
     if label not in entry:
-        raise KeyError('Dieser Wert existiert für die Eigenschaft nicht')
+        raise KeyError(T('Dieser Wert existiert für die Eigenschaft nicht', 'This value does not exist for the property'))
     entry[label] = _coerce_like(entry[label], value)
     S.dirty = True
     return float(entry[label])
@@ -495,7 +509,7 @@ def stat_add(ci, index):
     index = int(index)
     c = _char(ci)
     if any(int(a[SAVEGAME_STATPROPERTY_INDEX]) == index for a in c['stats']):
-        raise ValueError('Diese Eigenschaft hat der Charakter schon')
+        raise ValueError(T('Diese Eigenschaft hat der Charakter schon', 'The character already has this property'))
     fourcc = _attribute_names[index - 1][1] if index <= len(_attribute_names) else 'ATTR'
     add_stat_property(S.root, c['stats'], index, fourcc)
     S.dirty = True
@@ -542,7 +556,7 @@ def ability_set(ci, kind, ability_id, learned):
 def save():
     """Writes all changes into the zip (which also refreshes the '.x' CRC32). Returns the CRC as hex."""
     if S.root is None:
-        raise RuntimeError('Kein Spielstand geöffnet')
+        raise RuntimeError(T('Kein Spielstand geöffnet', 'No savegame open'))
     for entry in S.areas.values():
         if entry['dirty'] and entry['gff'] is not None:
             buf = BytesIO()
@@ -569,7 +583,7 @@ _API = {
     'stats': stats, 'stat_set': stat_set, 'stat_add': stat_add,
     'points': points, 'points_set': points_set,
     'abilities': abilities, 'ability_set': ability_set,
-    'save': save,
+    'save': save, 'set_lang': set_lang,
     'is_dirty': lambda: S.dirty,
 }
 

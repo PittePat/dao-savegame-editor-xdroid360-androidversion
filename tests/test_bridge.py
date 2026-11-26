@@ -31,6 +31,10 @@ assert {i['key']: i['count'] for i in ov['inventories']} == {'backpack': 2, 'plo
 assert ov['approvals'] == [{'id': 2001, 'name': 'Alistair', 'level': 10}], ov['approvals']
 assert [a['tag'] for a in ov['areas']] == ['plain_area', 'packed_area']
 
+assert C('set_lang', lang='en') == 'en'
+assert 'Invalid ResRef' in fail('item_set', key='backpack', i=0, field='resref', value='bad!')
+C('set_lang', lang='de')
+
 # general + approval
 assert C('set_general', money=999999999, capacity=120) == {'money': 999999999, 'capacity': 120}
 assert C('set_approval', pid=2001, level=100) == 100
